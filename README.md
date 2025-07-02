@@ -120,8 +120,9 @@ python captura_envio.py
 
 ## 👥 **Autores**
 
-- **Seu Nome** – Desenvolvimento do backend, visão computacional e integração embarcada.
+- **Luã Saunders** – Desenvolvimento do backend, visão computacional e integração embarcada.
 - **Equipe** – Colaboradores do projeto.
+  
 
 ---
 
