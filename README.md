@@ -1,142 +1,133 @@
 # 🛡️ Sistema Distribuído de Reconhecimento Facial para Controle de Acesso
 
-Este projeto implementa um sistema distribuído para autenticação de usuários por reconhecimento facial, aplicando conceitos de **redes neurais profundas**, **edge computing**, **protocolos eficientes de comunicação** e **middleware inteligente** para promover segurança, escalabilidade e interoperabilidade em ambientes multiusuário.
+Este projeto implementa um sistema distribuído para autenticação de usuários por reconhecimento facial, aplicando conceitos de **redes neurais profundas**, **edge computing**, **middleware inteligente** e **backend em C**, garantindo segurança, escalabilidade e interoperabilidade em ambientes multiusuário.
 
 ---
 
-## 🚀 **Visão Geral**
+## 🚀 Visão Geral
 
-- **Arquitetura:** Cliente-Servidor distribuído com integração ao middleware **InterSCity**.
-- **Cliente:** Dispositivo embarcado (ex: ESP32-S3) ou câmera conectada a um nó de captura.
-- **Servidor:** Processa as imagens, realiza reconhecimento facial com modelos CNNs e decide pela liberação ou negação do acesso.
-- **Comunicação:** Socket TCP ou gRPC para transmissão de dados, MQTT para integração IoT.
-- **Interface:** Dashboard web para cadastro de usuários, gerenciamento de permissões e visualização de logs de acesso.
-
----
-
-## 🔧 **Tecnologias Utilizadas**
-
-| **Tecnologia**              | **Descrição**                                                                                             |
-|------------------------------|-----------------------------------------------------------------------------------------------------------|
-| **TensorFlow Lite / MediaPipe** | Frameworks de inferência otimizados para execução embarcada (edge computing).                        |
-| **OpenCV / Dlib / face_recognition** | Bibliotecas para detecção, alinhamento e reconhecimento facial.                               |
-| **MQTT / gRPC**             | Protocolos leves e eficientes para comunicação assíncrona entre nós e serviços.                           |
-| **InterSCity**              | Middleware open-source que gerencia dispositivos distribuídos como recursos RESTful interoperáveis.        |
-| **ESP32-S3**                | Microcontrolador com suporte nativo a câmeras DVP, PSRAM e aceleração SIMD para IA embarcada.             |
-| **TLS 1.3 / RBAC**          | Criptografia ponta-a-ponta e controle de acesso baseado em papéis, garantindo segurança dos dados.         |
+- **Arquitetura:** Nós de captura embarcados se registram e enviam eventos de acesso ao middleware **InterSCity**, que intermedia e disponibiliza os serviços de reconhecimento e controle.
+- **Cliente (ESP32-S3):** Captura imagem facial e publica eventos no **InterSCity Data Collector**.
+- **Servidor (Backend em C):**
+  - Consome eventos de captura via **InterSCity Resource Catalog** e **Data Collector** (HTTP REST).
+  - Executa `recognize.py` para reconhecimento facial.
+  - Persistência de logs em **SQLite**.
+  - Publica resultados de autorização como eventos no **InterSCity Actuator Controller**.
+- **Dashboard Web (Python):** Implementado em **Flask/FastAPI**, consome APIs do **InterSCity** para exibir logs, gerenciar usuários e visualizar status.
 
 ---
 
-## 📂 **Estrutura do Repositório**
+## 🔧 Tecnologias Utilizadas
+
+| Tecnologia                        | Papel no Projeto                                                                                                       |
+|-----------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| **C**                             | Desenvolvimento do backend que consome e publica eventos no InterSCity e persiste logs em SQLite.                     |
+| **Python**                        | Script `recognize.py` para processamento de reconhecimento facial (OpenCV, face_recognition) e dashboard web.         |
+| **FaceNet / ArcFace**             | Modelos CNN para geração de embeddings faciais robustos usados pelo script Python.                                     |
+| **ESP32-S3**                      | Nó de captura embarcado que registra recurso e publica eventos de imagem no middleware InterSCity.                    |
+| **InterSCity (HTTP REST)**        | Middleware que gerencia o ciclo completo: registro de recurso, ingestão de dados, e controle de atuadores.           |
+| **SQLite**                        | Banco de dados local para armazenamento de logs de acesso quando necessário.                                           |
+| **Flask / FastAPI**               | Framework para implementação do dashboard web, consumindo APIs REST do InterSCity para interface administrativa.       |
+
+---
+
+## 📂 Estrutura do Repositório
 
 ```
-/cliente/
-  └── captura_envio.py        # Código do cliente (ESP32-S3/Raspberry) para captura e envio da imagem
-/servidor/
-  ├── servidor_main.py        # Backend com processamento de reconhecimento facial
-  ├── models/                 # Modelos CNN treinados (FaceNet/ArcFace)
-  └── database/               # Scripts e schemas do banco de dados de usuários e logs
-dashboard/
-  └── app.py                  # Interface web para administração
-docs/
-  └── arquitetura.md          # Documentação detalhada do sistema
-README.md
-requirements.txt
+cliente/                         # Código do cliente embarcado (ESP32-S3)
+  └── captura_envio.py           # Publica evento de captura de imagem no InterSCity
+servidor/                        # Backend principal em C
+  ├── backend_reconhecimento_facial.c  # Consome/publica eventos InterSCity, SQLite
+  └── recognize.py              # Script Python de reconhecimento facial
+dashboard/                       # Interface web em Python
+  └── app.py                    # Dashboard com Flask ou FastAPI, consome APIs InterSCity
+README.md                        # Documentação orientativa (este arquivo)
+requirements.txt                 # Dependências Python
 ```
 
 ---
 
-## ⚙️ **Instalação e Execução**
+## ⚙️ Instalação e Execução
 
-### 🔹 **1. Clone o repositório**
+### 1. Preparar ambiente Python
 
 ```bash
-git clone https://github.com/SeuUsuario/sistema-reconhecimento-facial-distribuido.git
-cd sistema-reconhecimento-facial-distribuido
-```
-
-### 🔹 **2. Crie e ative o ambiente virtual**
-
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-```
-
-### 🔹 **3. Instale as dependências**
-
-```bash
+python3 -m venv venv
+source venv/bin/activate    # Linux/Mac
+# Instalar dependências
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 🔹 **4. Execute o servidor**
+### 2. Compilar o Backend em C
+
+```bash
+gcc servidor/backend_reconhecimento_facial.c -o servidor/backend -lsqlite3 -lcurl
+```
+
+### 3. Configurar e Iniciar o InterSCity
+
+- Garanta que o **Resource Catalog**, **Data Collector** e **Actuator Controller** do InterSCity estejam ativos.
+- Anote a URL base do middleware (ex: `http://<HOST>:<PORT>/api`).
+
+### 4. Inicializar o Servidor
 
 ```bash
 cd servidor
-python servidor_main.py
+./backend 8000 ../database.db http://<INTERSCITY_BASE_URL>
 ```
 
-### 🔹 **5. Execute o cliente (nó de captura)**
+### 5. Executar o Cliente
 
 ```bash
 cd cliente
-python captura_envio.py
+python captura_envio.py --intercity-url http://<INTERSCITY_BASE_URL>
 ```
 
-### 🔹 **6. Acesse o dashboard**
+### 6. Executar o Dashboard Web
 
-- Abra o navegador em [http://localhost:5000](http://localhost:5000)
-
----
-
-## 📝 **Funcionalidades**
-
-- Captura de imagens faciais no nó cliente.
-- Envio de imagens via **socket TCP/gRPC** para o servidor central.
-- Processamento facial com modelos **FaceNet / ArcFace**.
-- Autorização ou negação do acesso em tempo real.
-- Registro de logs de acesso com timestamps, status e usuário.
-- Dashboard web para cadastro e gerenciamento de permissões.
-- Integração com **InterSCity** para gestão como recurso urbano inteligente.
-
----
-
-## 🔒 **Segurança**
-
-- Criptografia de comunicação com **TLS 1.3**.
-- Controle de acesso com **RBAC** para diferentes níveis de usuário.
-- Armazenamento seguro de embeddings faciais no banco de dados.
-
----
-
-## 🧠 **Possíveis Evoluções**
-
-- Integração com **biometria multivariada** (face + voz + impressão digital).
-- Implementação de **reconhecimento facial 3D** para maior robustez.
-- Uso de **Federated Learning** para treinamento distribuído sem compartilhamento de dados brutos.
-- Auditoria de acessos com **blockchain** para logs imutáveis.
-
----
-
-## 👥 **Autores**
-
-- **Luã Saunders** – Desenvolvimento do backend, visão computacional e integração embarcada.
-- **Equipe** – Colaboradores do projeto.
-  
-
----
-
-## 📄 **Licença**
-
-Este projeto está licenciado sob a [MIT License](LICENSE).
-
----
-
-## 📞 **Contato**
-
-Para dúvidas ou colaboração, entre em contato: [saunders.luan@gmail.com]
-
----
-
+```bash
+cd dashboard
+python app.py --intercity-url http://<INTERSCITY_BASE_URL>
 ```
 
+---
+
+## 📝 Funcionalidades
+
+- **Registro de recurso:** Nós de captura se registram no InterSCity Resource Catalog.
+- **Publicação de eventos de captura:** Imagens faciais são enviadas como eventos ao Data Collector.
+- **Processamento facial:** Backend consome eventos, executa reconhecimento e publica resultados de autorização.
+- **Atuação distribuída:** Actuator Controller aciona liberação de acesso conforme evento publicado.
+- **Persistência local:** Logs em SQLite para falhas ou auditoria offline.
+- **Dashboard:** Interface administrativa consumindo APIs InterSCity para CRUD de usuários e visualização de logs.
+
+---
+
+## 🔒 Segurança
+
+- **TLS 1.3** nas chamadas HTTP ao InterSCity.
+- **RBAC** implementado no dashboard via FastAPI.
+- **Federated Learning** exploratório para treinamento sem expor dados brutos.
+
+---
+
+## ⚙️ Evoluções Futuras
+
+- Biometria multivariada (face + voz).
+- Reconhecimento 3D para maior robustez.
+- CI/CD com GitHub Actions e containers Docker.
+- Orquestração com Kubernetes.
+
+---
+
+## 👥 Autores
+
+- **Seu Nome** – Backend em C e integração com InterSCity.
+- **Equipe** – Cliente embarcado e dashboard.
+
+---
+
+## 📄 Licença
+
+MIT License
