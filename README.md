@@ -123,9 +123,8 @@ python app.py --intercity-url http://<INTERSCITY_BASE_URL>
 
 ## 👥 Autores
 
-- **Seu Nome** – Backend em C e integração com InterSCity.
+- **Luã Saunders** – Backend em C e integração com InterSCity.
 - **Equipe** – Cliente embarcado e dashboard.
-
 ---
 
 ## 📄 Licença
